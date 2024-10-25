@@ -135,6 +135,17 @@ function SubmitProblem({
 
     const response = await axios.get(`/api/submission/?id=${id}`);
 
+    // const allTestsPassed = response.data.submission.testcases.every(
+    //   (tc) => tc.status === "ACCEPTED"
+    // );
+  
+    // if (allTestsPassed) {
+    //   setStatus(SubmitStatus.ACCEPTED);
+    //   setTestcases(response.data.submission.testcases);
+    //   toast.success("All tests passed!");
+    //   return; 
+    // }
+
     console.log(response.data.submission);
     if (response.data.submission.status === "PENDING") {
       setTestcases(response.data.submission.testcases);

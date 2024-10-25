@@ -1,4 +1,7 @@
-public static int maxElement(List<Integer> arr) {
-    // Implementation goes here
-    return result;
+class Solution {
+    public int maxElement(List<Integer> arr) {
+        // Your code goes here
+        return 0;
+    }
+    // You can add more methods here.
 }

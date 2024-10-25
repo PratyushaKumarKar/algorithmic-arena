@@ -5,23 +5,19 @@
 #include <sstream>
 #include <climits>
 
-##USER_CODE_HERE##
+//##USER_CODE_HERE##
+
 
 int main() {
-  std::ifstream file("/dev/problems/classroom/tests/inputs/##INPUT_FILE_INDEX##.txt");
-  std::vector<std::string> lines;
-  std::string line;
-  while (std::getline(file, line)) lines.push_back(line);
+    int m_arr;
+std::cin >> m_arr;
+std::vector<int> arr(m_arr);
 
-  file.close();
-  int size_arr;
-  std::istringstream(lines[0]) >> size_arr;
-  std::vector<int> arr(size_arr);
-  if(!size_arr==0) {
-  	std::istringstream iss(lines[1]);
-  	for (int i=0; i < size_arr; i++) iss >> arr[i];
-  }
-  int result = classroom(arr);
-  std::cout << result << std::endl;
-  return 0;
+for(int i = 0; i < m_arr; ++i) {
+    std::cin >> arr[i];
+}
+    Solution obj;
+    int result = obj.classroom(arr);
+    std::cout << result << std::endl;
+    return 0;
 }

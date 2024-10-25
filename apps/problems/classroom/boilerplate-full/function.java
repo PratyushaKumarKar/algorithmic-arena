@@ -1,39 +1,23 @@
 
-import java.io.*;
-import java.util.*;
-
-public class Main {
-    
-    ##USER_CODE_HERE##
-
-    public static void main(String[] args) {
-        String filePath = "/dev/problems/classroom/tests/inputs/##INPUT_FILE_INDEX##.txt"; 
-        List<String> lines = readLinesFromFile(filePath);
-        int size_arr = Integer.parseInt(lines.get(0).trim());
-
-        List<Integer> arr = new ArrayList<>(size_arr);
-
-        String[] inputStream = lines.get(1).trim().split("\s+");
-
-        for (String inputChar : inputStream)  {
-
-          arr.add(Integer.parseInt(inputChar));
-
-        }
-
-        int result = classroom(arr);
+      import java.io.*;
+      import java.util.*;
+  
+      //##USER_CODE_HERE##
+  
+      public class Main {
+        
+      public static void main(String[] args) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+        int size_arr = Integer.parseInt(br.readLine().trim());
+      List<Integer> arr = new ArrayList<>();
+      String[] items_arr = br.readLine().trim().split("\\s+");
+      for (int i = 0; i < size_arr; i++) {
+        arr.add(Integer.parseInt(items_arr[i]));
+      }
+        Solution obj = new Solution();
+        int result = obj.classroom(arr);
         System.out.println(result);
-    }
-    public static List<String> readLinesFromFile(String filePath) {
-        List<String> lines = new ArrayList<>();
-        try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
-            String line;
-            while ((line = br.readLine()) != null) {
-                lines.add(line);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return lines;
-    }
-}
+        br.close();
+      }
+      }
+    
