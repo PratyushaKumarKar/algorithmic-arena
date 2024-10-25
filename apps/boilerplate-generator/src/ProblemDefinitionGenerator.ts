@@ -56,9 +56,7 @@ export class ProblemDefinitionParser {
     const inputParams = this.inputFields
       .map(field => {
           const type = this.mapTypeToCpp(field.type);
-          console.log(type + "this is cpp type check")
           const isPassByReference = this.shouldPassByReferenceCpp(type);
-          console.log(type + 'pass' + isPassByReference)
           return `${type}${isPassByReference ? ' &' : ''} ${field.name}`;
       })
       .join(", ");
