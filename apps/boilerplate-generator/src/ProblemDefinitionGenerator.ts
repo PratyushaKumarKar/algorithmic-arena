@@ -432,19 +432,4 @@ impl ${className} {
           return "unknown";
       }
     }
-
-  // For JavaScript, since types are dynamic, we'll use any
-  // mapTypeToJs(type: string): string {
-  //   if (type.endsWith('[]') || type.startsWith('list<')) {
-  //     return 'Array';
-  //   } else if (['int', 'float', 'double'].includes(type)) {
-  //     return 'number';
-  //   } else if (type === 'bool') {
-  //     return 'boolean';
-  //   } else if (type === 'string') {
-  //     return 'string';
-  //   } else {
-  //     return 'any';
-  //   }
-  // }
 }
