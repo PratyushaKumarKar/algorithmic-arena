@@ -104,28 +104,67 @@ generateCppInputReads(): string {
 }
 
 generateCppOutputWrite(varName: string): string {
-    const cppOutputType = this.mapTypeToCpp(this.outputType);
-    if (cppOutputType === 'bool') {
-        return `std::cout << (${varName} ? "true" : "false") << std::endl;`;
-    } else if (cppOutputType === 'ListNode*') {
-        return `
+  const cppOutputType = this.mapTypeToCpp(this.outputType);
+  if (cppOutputType === 'bool') {
+      return `std::cout << (${varName} ? "true" : "false") << std::endl;`;
+  } else if (cppOutputType === 'ListNode*') {
+      return `
 ListNode* current = ${varName};
 while (current) {
-    std::cout << current->val;
-    if (current->next) std::cout << " ";
-    current = current->next;
+  std::cout << current->val;
+  if (current->next) std::cout << " ";
+  current = current->next;
 }
 std::cout << std::endl;`;
-    } else if (cppOutputType === 'TreeNode*') {
-        return `
-void printTree(TreeNode* root) {
-    // Implement a method to print TreeNode
+  } else if (cppOutputType === 'TreeNode*') {
+      return `
+std::queue<TreeNode*> q;
+q.push(${varName});
+while (!q.empty()) {
+  TreeNode* node = q.front(); q.pop();
+  if (node) {
+      std::cout << node->val << " ";
+      q.push(node->left);
+      q.push(node->right);
+  } else {
+      std::cout << "null ";
+  }
 }
-
-printTree(${varName});`;
-    } else {
-        return `std::cout << ${varName} << std::endl;`;
-    }
+std::cout << std::endl;`;
+  } else if (cppOutputType.endsWith("[][]")) {
+      const sizeVarNameRows = `rows_${varName}`;
+      const sizeVarNameCols = `cols_${varName}`;
+      return `
+for (int i = 0; i < ${sizeVarNameRows}; ++i) {
+  for (int j = 0; j < ${sizeVarNameCols}; ++j) {
+      std::cout << ${varName}[i][j] << " ";
+  }
+  std::cout << std::endl;
+}`;
+  } else if (cppOutputType.endsWith("[]")) {
+      const sizeVarName = `size_${varName}`;
+      return `
+for (int i = 0; i < ${sizeVarName}; ++i) {
+  std::cout << ${varName}[i] << " ";
+}
+std::cout << std::endl;`;
+  } else if (cppOutputType.startsWith('std::vector<std::vector')) {
+      return `
+for (const auto& row : ${varName}) {
+  for (const auto& item : row) {
+      std::cout << item << " ";
+  }
+  std::cout << std::endl;
+}`;
+  } else if (cppOutputType.startsWith('std::vector')) {
+      return `
+for (const auto& item : ${varName}) {
+  std::cout << item << " ";
+}
+std::cout << std::endl;`;
+  } else {
+      return `std::cout << ${varName} << std::endl;`;
+  }
 }
 
 getCppInputRead(field: { type: string; name: string }): string {
@@ -210,7 +249,25 @@ for(int i = 0; i < m_${field.name}; ++i) {
         std::cin >> ${field.name}[i][j];
     }
 }`;
-    } else if (cppType.startsWith('std::vector')) {
+    } else if (cppType.endsWith("[][]")) {
+      return `int ${field.name}_rows, ${field.name}_cols;
+std::cin >> ${field.name}_rows >> ${field.name}_cols;
+${cppType} ${field.name}(${field.name}_rows, std::vector<${this.getInnerTypeCpp(cppType)}>(n_${field.name}));
+
+for (int i = 0; i < ${field.name}_rows; ++i) {
+  for (int j = 0; j < ${field.name}_cols; ++j) {
+      std::cin >> ${field.name}[i][j];
+  }
+}`;
+  } else if (cppType.endsWith("[]")) {
+      return `int ${field.name}_size;
+std::cin >> ${field.name}_size;
+${cppType} ${field.name}(${field.name}_size);
+
+for (int i = 0; i < ${field.name}_size; ++i) {
+  std::cin >> ${field.name}[i];
+}`;
+  } else if (cppType.startsWith('std::vector')) {
         const innerType = this.getInnerTypeCpp(cppType);
         return `int m_${field.name};
 std::cin >> m_${field.name};
@@ -431,6 +488,36 @@ class TreeNode {
       return `printListNode(${varName});`;
     } else if (outputType === 'TreeNode') {
       return `printTreeNode(${varName});`;
+    } else if (outputType === 'int[]' || outputType === 'float[]' || outputType === 'double[]' || outputType === 'long[]' || outputType === 'char[]') {
+      return `
+  for (int item : ${varName}) {
+    System.out.print(item + " ");
+  }
+  System.out.println();`;
+    } else if (outputType === 'int[][]' || outputType === 'float[][]' || outputType === 'double[][]' || outputType === 'long[][]' || outputType === 'char[][]') {
+      return `
+  for (int[] row : ${varName}) {
+    for (int item : row) {
+      System.out.print(item + " ");
+    }
+    System.out.println();
+  }`; 
+    } else if (outputType.startsWith('List<List<')) {
+      const innerType = this.getInnerTypeJava(this.getInnerTypeJava(outputType));
+      return `
+  for (List<${innerType}> row : ${varName}) {
+    for (${innerType} item : row) {
+      System.out.print(item + " ");
+    }
+    System.out.println();
+  }`; 
+    } else if (outputType.startsWith('List<')) {
+      const innerType = this.getInnerTypeJava(outputType);
+      return `
+  for (${innerType} item : ${varName}) {
+    System.out.print(item + " ");
+  }
+  System.out.println();`;
     } else {
       return `System.out.println(${varName});`;
     }
@@ -809,14 +896,7 @@ ${outputWrite}
         .map((field) => field.name)
         .join(", ")});`;
        
-      let outputWrite = '';
-        if (this.outputType === 'ListNode') {
-          outputWrite = `print_list_node(&result);`;
-        } else if (this.outputType === 'TreeNode') {
-          outputWrite = `print_tree_node(result);`;
-        } else {
-          outputWrite = `println!("{}", result);`;
-        }
+      let outputWrite = this.generateRustOutputWrite('result');
     
         let typeDefinitions = '';
         if (requiresListNode) {
@@ -971,6 +1051,28 @@ ${outputWrite}
     }
 `;
 }
+
+generateRustOutputWrite(varName: string): string {
+  const outputType = this.mapTypeToRust(this.outputType);
+  switch (outputType) {
+      case 'ListNode':
+          return `print_list_node(&${varName});`;
+      case 'TreeNode':
+          return `print_tree_node(${varName});`;
+      case 'Vec<i32>':
+      case 'Vec<f64>':
+      case 'Vec<char>':
+      case 'Vec<String>':
+          return `println!("{}", ${varName}.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(" "));`;
+      case 'Vec<Vec<i32>>':
+      case 'Vec<Vec<f64>>':
+      case 'Vec<Vec<char>>':
+      case 'Vec<Vec<String>>':
+          return `${varName}.iter().for_each(|row| println!("{}", row.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(" ")));`;
+      default:
+          return `println!("{}", ${varName});`;
+  }
+}
    
     mapTypeToRust(type: string): string {
       switch (type) {
@@ -1034,65 +1136,101 @@ ${outputWrite}
     }
 
     generateParsingFunctions(): string {
-      return `fn parse_input(lines: &mut Lines, size_arr: usize) -> Vec<i32> {
-        lines.next()
-            .unwrap_or_default()
-            .split_whitespace()
-            .filter_map(|x| x.parse::<i32>().ok())
-            .collect()
-    }
-    
-    fn parse_float(lines: &mut Lines, size_arr: usize) -> Vec<f64> {
-        lines.next()
-            .unwrap_or_default()
-            .split_whitespace()
-            .filter_map(|x| x.parse::<f64>().ok())
-            .collect()
-    }
-    
-    fn parse_char(lines: &mut Lines, size_arr: usize) -> Vec<char> {
-        lines.next()
-            .unwrap_or("")
-            .chars()
-            .collect()
-    }
-    
-    fn parse_string(lines: &mut Lines, size_arr: usize) -> Vec<String> {
-        lines.next()
-            .unwrap_or("")
-            .split_whitespace()
-            .map(|x| x.to_string())
-            .collect()
-    }
-    
-    fn parse_bool(lines: &mut Lines, size_arr: usize) -> Vec<bool> {
-        lines.next()
-            .unwrap_or("")
-            .split_whitespace()
-            .map(|x| x == "true")
-            .collect()
-    }
-    
-    fn parse_input_matrix(lines: &mut Lines, size_arr: usize) -> Vec<i32> {
-        parse_input(lines, size_arr)
-    }
-    
-    fn parse_float_matrix(lines: &mut Lines, size_arr: usize) -> Vec<f64> {
-        parse_float(lines, size_arr)
-    }
-    
-    fn parse_char_matrix(lines: &mut Lines, size_arr: usize) -> Vec<char> {
-        parse_char(lines, size_arr)
-    }
-    
-    fn parse_string_matrix(lines: &mut Lines, size_arr: usize) -> Vec<String> {
-        parse_string(lines, size_arr)
-    }
-    
-    fn parse_bool_matrix(lines: &mut Lines, size_arr: usize) -> Vec<bool> {
-        parse_bool(lines, size_arr)
-    }`;
-    }
+      return `fn parse_input(lines: &mut Lines, size_outer: usize) -> Vec<i32> {
+          lines.next()
+              .unwrap_or_default()
+              .split_whitespace()
+              .filter_map(|x| x.parse::<i32>().ok())
+              .collect()
+      }
+  
+      fn parse_float(lines: &mut Lines, size_outer: usize) -> Vec<f64> {
+          lines.next()
+              .unwrap_or_default()
+              .split_whitespace()
+              .filter_map(|x| x.parse::<f64>().ok())
+              .collect()
+      }
+  
+      fn parse_char(lines: &mut Lines, size_outer: usize) -> Vec<char> {
+          lines.next()
+              .unwrap_or("")
+              .chars()
+              .collect()
+      }
+  
+      fn parse_string(lines: &mut Lines, size_outer: usize) -> Vec<String> {
+          lines.next()
+              .unwrap_or("")
+              .split_whitespace()
+              .map(|x| x.to_string())
+              .collect()
+      }
+  
+      fn parse_bool(lines: &mut Lines, size_outer: usize) -> Vec<bool> {
+          lines.next()
+              .unwrap_or("")
+              .split_whitespace()
+              .map(|x| x == "true")
+              .collect()
+      }
+  
+      // Functions to parse 2D matrices for each data type
+  
+      fn parse_input_matrix(lines: &mut Lines, rows: usize, cols: usize) -> Vec<Vec<i32>> {
+          (0..rows)
+              .map(|_| lines.next()
+                  .unwrap_or_default()
+                  .split_whitespace()
+                  .take(cols)
+                  .filter_map(|x| x.parse::<i32>().ok())
+                  .collect())
+              .collect()
+      }
+  
+      fn parse_float_matrix(lines: &mut Lines, rows: usize, cols: usize) -> Vec<Vec<f64>> {
+          (0..rows)
+              .map(|_| lines.next()
+                  .unwrap_or_default()
+                  .split_whitespace()
+                  .take(cols)
+                  .filter_map(|x| x.parse::<f64>().ok())
+                  .collect())
+              .collect()
+      }
+  
+      fn parse_char_matrix(lines: &mut Lines, rows: usize, cols: usize) -> Vec<Vec<char>> {
+          (0..rows)
+              .map(|_| lines.next()
+                  .unwrap_or("")
+                  .chars()
+                  .take(cols)
+                  .collect())
+              .collect()
+      }
+  
+      fn parse_string_matrix(lines: &mut Lines, rows: usize, cols: usize) -> Vec<Vec<String>> {
+          (0..rows)
+              .map(|_| lines.next()
+                  .unwrap_or("")
+                  .split_whitespace()
+                  .take(cols)
+                  .map(|x| x.to_string())
+                  .collect())
+              .collect()
+      }
+  
+      fn parse_bool_matrix(lines: &mut Lines, rows: usize, cols: usize) -> Vec<Vec<bool>> {
+          (0..rows)
+              .map(|_| lines.next()
+                  .unwrap_or("")
+                  .split_whitespace()
+                  .take(cols)
+                  .map(|x| x == "true")
+                  .collect())
+              .collect()
+      }`;
+  }
 
     mapTypeToJs(type: string, name: string): string {
       switch (type) {
@@ -1192,6 +1330,32 @@ ${outputWrite}
           return `printListNode(${varName});`;
         case 'TreeNode':
           return `printTreeNode(${varName});`;
+        case 'int[]':
+        case 'float[]':
+        case 'double[]':
+        case 'char[]':
+        case 'string[]':
+        case 'bool[]':
+        case 'list<int>':
+        case 'list<float>':
+        case 'list<double>':
+        case 'list<char>':
+        case 'list<bool>':
+        case 'list<string>':
+          return `console.log(${varName}.join(' '));`;
+        case 'list<list<int>>':
+        case 'list<list<float>>':
+        case 'list<list<double>>':
+        case 'list<list<char>>':
+        case 'list<list<bool>>':
+        case 'list<list<string>>':
+        case 'int[][]':
+        case 'float[][]':
+        case 'double[][]':
+        case 'char[][]':
+        case 'string[][]':
+        case 'bool[][]':
+          return `${varName}.forEach(row => console.log(row.join(' ')));`;
         default:
           return `console.log(${varName});`;
       }
