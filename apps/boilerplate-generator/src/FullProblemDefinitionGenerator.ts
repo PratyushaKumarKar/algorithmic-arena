@@ -50,8 +50,12 @@ export class FullProblemDefinitionParser {
     const className = this.sanitizeName(this.className);
     const functionName = this.sanitizeName(this.functionName);
     const outputType = this.mapTypeToCpp(this.outputType);
-    const inputParams = this.inputFields.map(field => `${this.mapTypeToCpp(field.type)} ${field.name}`).join(", ");
-    // console.log(inputParams + " input params");
+    const inputParams = this.inputFields
+        .map((field) => `${this.mapTypeToCpp(field.type)} ${field.name}`)
+        .join(", ");
+
+    const requiresTreeNode = this.inputFields.some(field => field.type === 'TreeNode') || this.outputType === 'TreeNode';
+    const requiresListNode = this.inputFields.some(field => field.type === 'ListNode') || this.outputType === 'ListNode';
 
     const mainFunction = `
 int main() {
@@ -62,14 +66,34 @@ int main() {
     return 0;
 }`;
 
+    let typeDefinitions = '';
+    if (requiresTreeNode) {
+        typeDefinitions += `
+struct TreeNode {
+    int val;
+    TreeNode *left;
+    TreeNode *right;
+    TreeNode(int x) : val(x), left(nullptr), right(nullptr) {}
+};`;
+    }
+    if (requiresListNode) {
+        typeDefinitions += `
+struct ListNode {
+    int val;
+    ListNode *next;
+    ListNode(int x) : val(x), next(nullptr) {}
+};`;
+    }
+
     return `#include <iostream>
-#include <fstream>
 #include <vector>
 #include <string>
 #include <sstream>
 #include <climits>
 
-//##USER_CODE_HERE##
+${typeDefinitions}
+
+//##USER_CODE_HERE
 
 ${mainFunction}
 `;
@@ -83,6 +107,22 @@ generateCppOutputWrite(varName: string): string {
     const cppOutputType = this.mapTypeToCpp(this.outputType);
     if (cppOutputType === 'bool') {
         return `std::cout << (${varName} ? "true" : "false") << std::endl;`;
+    } else if (cppOutputType === 'ListNode*') {
+        return `
+ListNode* current = ${varName};
+while (current) {
+    std::cout << current->val;
+    if (current->next) std::cout << " ";
+    current = current->next;
+}
+std::cout << std::endl;`;
+    } else if (cppOutputType === 'TreeNode*') {
+        return `
+void printTree(TreeNode* root) {
+    // Implement a method to print TreeNode
+}
+
+printTree(${varName});`;
     } else {
         return `std::cout << ${varName} << std::endl;`;
     }
@@ -91,7 +131,53 @@ generateCppOutputWrite(varName: string): string {
 getCppInputRead(field: { type: string; name: string }): string {
     const cppType = this.mapTypeToCpp(field.type);
 
-    if (cppType.startsWith('std::vector<std::vector<char>>')) {
+    if (cppType === 'TreeNode*') {
+        return `
+int n;
+std::cin >> n;
+std::vector<TreeNode*> nodes(n, nullptr);
+std::vector<int> left_indices(n, -1);
+std::vector<int> right_indices(n, -1);
+
+for (int i = 0; i < n; ++i) {
+    int val, l, r;
+    std::cin >> val >> l >> r;
+    nodes[i] = new TreeNode(val);
+    left_indices[i] = l;
+    right_indices[i] = r;
+}
+
+for (int i = 0; i < n; ++i) {
+    if (left_indices[i] != -1) {
+        nodes[i]->left = nodes[left_indices[i]];
+    }
+    if (right_indices[i] != -1) {
+        nodes[i]->right = nodes[right_indices[i]];
+    }
+}
+
+TreeNode* ${field.name} = nodes[0];
+`;
+    } else if (cppType === 'ListNode*') {
+        return `
+int n;
+std::cin >> n;
+ListNode* ${field.name} = nullptr;
+ListNode* tail = nullptr;
+for (int i = 0; i < n; ++i) {
+    int val;
+    std::cin >> val;
+    ListNode* newNode = new ListNode(val);
+    if (${field.name} == nullptr) {
+        ${field.name} = newNode;
+        tail = newNode;
+    } else {
+        tail->next = newNode;
+        tail = newNode;
+    }
+}
+`;
+    } else if (cppType.startsWith('std::vector<std::vector<char>>')) {
         return `int m_${field.name};
 std::cin >> m_${field.name};
 int n_${field.name};
@@ -160,6 +246,10 @@ getInnerTypeCpp(type: string): string {
 
 mapTypeToCpp(type: string): string {
     switch (type) {
+        case "TreeNode":
+            return "TreeNode*";
+        case "ListNode":
+            return "ListNode*";
         case "int":
             return "int";
         case "float":
@@ -234,40 +324,116 @@ mapTypeToCpp(type: string): string {
             return "unknown";
     }
 }
+generateJava(): string {
+  const className = this.sanitizeName(this.className);
+  const functionName = this.sanitizeName(this.functionName);
+  const outputType = this.mapTypeToJava(this.outputType);
+  
+  const mainFunction = `
+    public static void main(String[] args) throws IOException {
+      BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+      ${this.generateJavaInputReads()}
+      ${className} obj = new ${className}();
+      ${outputType} result = obj.${functionName}(${this.inputFields.map(field => field.name).join(", ")});
+      ${this.generateJavaOutputWrite('result')}
+      br.close();
+    }`;
 
-  generateJava(): string {
-    const className = this.sanitizeName(this.className);
-    const functionName = this.sanitizeName(this.functionName);
-    const outputType = this.mapTypeToJava(this.outputType);
-  
-    const mainFunction = `
-      public static void main(String[] args) throws IOException {
-        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-        ${this.generateJavaInputReads()}
-        ${className} obj = new ${className}();
-        ${outputType} result = obj.${functionName}(${this.inputFields.map(field => field.name).join(", ")});
-        ${this.generateJavaOutputWrite('result')}
-        br.close();
-      }`;
-  
-    return `
-      import java.io.*;
-      import java.util.*;
-  
-      //##USER_CODE_HERE##
-  
-      public class Main {
-        ${mainFunction}
-      }
-    `;
+  const requiresListNode = this.inputFields.some(field => this.mapTypeToJava(field.type) === 'ListNode') || outputType === 'ListNode';
+  const requiresTreeNode = this.inputFields.some(field => this.mapTypeToJava(field.type) === 'TreeNode') || outputType === 'TreeNode';
+
+  let typeDefinitions = '';
+
+  if (requiresListNode) {
+    typeDefinitions += `
+class ListNode {
+    int val;
+    ListNode next;
+    ListNode(int x) { val = x; }
+}
+`;
   }
+
+  if (requiresTreeNode) {
+    typeDefinitions += `
+class TreeNode {
+    int val;
+    TreeNode left;
+    TreeNode right;
+    TreeNode(int x) { val = x; }
+}
+`;
+  }
+
+  let helperMethods = '';
+
+  if (requiresListNode) {
+    helperMethods += `
+  static ListNode buildListNode(String[] data) {
+    ListNode dummy = new ListNode(0);
+    ListNode current = dummy;
+    for (String s : data) {
+      current.next = new ListNode(Integer.parseInt(s));
+      current = current.next;
+    }
+    return dummy.next;
+  }
+
+  static void printListNode(ListNode head) {
+    ListNode current = head;
+    while (current != null) {
+      System.out.print(current.val);
+      if (current.next != null) {
+        System.out.print(" ");
+      }
+      current = current.next;
+    }
+    System.out.println();
+  }
+`;
+  }
+
+  if (requiresTreeNode) {
+    helperMethods += `
+  static TreeNode buildTreeNode(String data) {
+    // Implement tree building logic here
+    return null;
+  }
+
+  static void printTreeNode(TreeNode root) {
+    // Implement tree printing logic here
+  }
+`;
+  }
+
+  return `
+    import java.io.*;
+    import java.util.*;
+
+    ${typeDefinitions}
+
+    //##USER_CODE_HERE##
+
+    public class Main {
+      ${mainFunction}
+      ${helperMethods}
+    }
+  `;
+}
   
   generateJavaInputReads(): string {
     return this.inputFields.map(field => this.getJavaInputRead(field)).join("\n");
   }
   
   generateJavaOutputWrite(varName: string): string {
-    return `System.out.println(${varName});`;
+    const outputType = this.mapTypeToJava(this.outputType);
+    if (outputType === 'ListNode') {
+      return `printListNode(${varName});`;
+    } else if (outputType === 'TreeNode') {
+      return `printTreeNode(${varName});`;
+    } else {
+      return `System.out.println(${varName});`;
+    }
   }
   
   getJavaInputRead(field: { type: string; name: string }): string {
@@ -336,6 +502,17 @@ mapTypeToCpp(type: string): string {
           ${field.name}[i] = ${this.generateJavaNext(innerType, 'items_' + field.name + '[i]')};
         }`;
       }
+    } else if (javaType === 'ListNode') {
+      return `
+      int n_${field.name} = Integer.parseInt(br.readLine().trim());
+      String[] listData_${field.name} = br.readLine().trim().split("\\\\s+");
+      ListNode ${field.name} = buildListNode(listData_${field.name});
+      `;
+    } else if (javaType === 'TreeNode') {
+      return `
+      String treeData_${field.name} = br.readLine().trim();
+      TreeNode ${field.name} = buildTreeNode(treeData_${field.name});
+      `;
     } else if (javaType === 'String') {
       return `String ${field.name} = br.readLine().trim();`;
     } else if (javaType === 'char' || javaType === 'Character') {
@@ -416,6 +593,10 @@ mapTypeToCpp(type: string): string {
       case 'bool':
       case 'boolean':
         return 'boolean';
+      case 'ListNode':
+        return 'ListNode';
+      case 'TreeNode':
+        return 'TreeNode';
       case 'void':
         return 'void';
       default:
@@ -433,7 +614,7 @@ mapTypeToCpp(type: string): string {
         }
     }
   }
-  
+
   boxPrimitiveType(type: string): string {
     switch (type) {
       case 'int':
@@ -457,32 +638,131 @@ mapTypeToCpp(type: string): string {
     return name.replace(/[^a-zA-Z0-9_]/g, '_');
   }
      
-
   generateJs(): string {
     const inputReads = this.inputFields
       .map((field) => this.mapTypeToJs(field.type, field.name))
       .join("\n  ");
-    
+
     const functionCall = `const result = ${this.functionName}(${this.inputFields.map((field) => field.name).join(", ")});`;
-    const outputWrite = `console.log(result);`;
-  
-    return `//##USER_CODE_HERE##
-  
-  const input = require('fs').readFileSync('/dev/problems/${this.problemName.toLowerCase().replace(" ", "-")}/tests/inputs/##INPUT_FILE_INDEX##.txt', 'utf8').trim().split('\\n').join(' ').split(' ');
-  ${inputReads}
-  ${functionCall}
-  ${outputWrite}
+    const outputWrite = this.generateJsOutputWrite('result');
+
+    const requiresListNode = this.inputFields.some(field => field.type === 'ListNode') || this.outputType === 'ListNode';
+    const requiresTreeNode = this.inputFields.some(field => field.type === 'TreeNode') || this.outputType === 'TreeNode';
+
+    let typeDefinitions = '';
+    if (requiresListNode) {
+        typeDefinitions += `
+class ListNode {
+    constructor(val = 0, next = null) {
+        this.val = val;
+        this.next = next;
+    }
+}
+
+function buildListNode(values) {
+    let dummy = new ListNode();
+    let current = dummy;
+    values.forEach(val => {
+        current.next = new ListNode(parseInt(val, 10));
+        current = current.next;
+    });
+    return dummy.next;
+}
+
+function printListNode(head) {
+    const result = [];
+    while (head) {
+        result.push(head.val);
+        head = head.next;
+    }
+    console.log(result.join(' '));
+}
+`;
+    }
+    if (requiresTreeNode) {
+        typeDefinitions += `
+class TreeNode {
+    constructor(val = 0, left = null, right = null) {
+        this.val = val;
+        this.left = left;
+        this.right = right;
+    }
+}
+
+function buildTreeNode(values) {
+    if (!values.length) return null;
+    const root = new TreeNode(parseInt(values[0], 10));
+    const queue = [root];
+    let i = 1;
+    while (queue.length && i < values.length) {
+        const node = queue.shift();
+        if (values[i] !== 'null') {
+            node.left = new TreeNode(parseInt(values[i], 10));
+            queue.push(node.left);
+        }
+        i++;
+        if (i < values.length && values[i] !== 'null') {
+            node.right = new TreeNode(parseInt(values[i], 10));
+            queue.push(node.right);
+        }
+        i++;
+    }
+    return root;
+}
+
+function printTreeNode(root) {
+    const result = [];
+    const queue = [root];
+    while (queue.length) {
+        const node = queue.shift();
+        if (node) {
+            result.push(node.val);
+            queue.push(node.left);
+            queue.push(node.right);
+        } else {
+            result.push('null');
+        }
+    }
+    console.log(result.join(' '));
+}
+`;
+    }
+
+    return `
+    ${typeDefinitions}
+
+    //##USER_CODE_HERE##
+
+const input = require('fs').readFileSync('/dev/problems/${this.problemName.toLowerCase().replace(" ", "-")}/tests/inputs/##INPUT_FILE_INDEX##.txt', 'utf8').trim().split('\\n').join(' ').split(' ');
+${inputReads}
+${functionCall}
+${outputWrite}
     `;
   }
 
     generateRust(): string {
-      const inputs = this.inputFields
-        .map((field) => `${field.name}: ${this.mapTypeToRust(field.type)}`)
-        .join(", ");
+      const requiresListNode = this.inputFields.some(field => field.type === 'ListNode') || this.outputType === 'ListNode';
+      const requiresTreeNode = this.inputFields.some(field => field.type === 'TreeNode') || this.outputType === 'TreeNode';
     
       const inputReads = this.inputFields
         .map((field) => {
-          if (field.type.startsWith("list<list<char>") || field.type.startsWith( "char[][]")) {
+          if (field.type === 'ListNode') {
+            return `
+      let n_${field.name}: usize = lines.next().and_then(|line| line.parse().ok()).unwrap_or(0);
+      let ${field.name} = build_list_node(&mut lines, n_${field.name});`;
+          } else if (field.type === 'TreeNode') {
+            return `
+      let tree_values_${field.name}: Vec<Option<i32>> = lines.next().unwrap_or("").split_whitespace()
+          .map(|s| if s == "null" { None } else { s.parse::<i32>().ok() }).collect();
+      let ${field.name} = build_tree_node(&tree_values_${field.name});`;
+          } else if (field.type.startsWith("list<list<char>") || field.type.startsWith("char[][]")) {
+            return `let size_${field.name}_outer: usize = lines.next().and_then(|line| line.parse().ok()).unwrap_or(0);
+      let mut ${field.name}: Vec<Vec<char>> = vec![];
+      for _ in 0..size_${field.name}_outer {
+        let row = lines.next().unwrap_or("").chars().collect::<Vec<char>>();
+        ${field.name}.push(row);
+      }`;
+          } else if (field.type.startsWith("list<list<char>") || field.type.startsWith( "char[][]")) {
             return `let size_${field.name}_outer: usize = lines.next().and_then(|line| line.parse().ok()).unwrap_or(0);
     let mut ${field.name}: Vec<Vec<char>> = vec![];
     for _ in 0..size_${field.name}_outer {
@@ -528,14 +808,151 @@ mapTypeToCpp(type: string): string {
       const functionCall = `let result = Solution::${this.functionName}(${this.inputFields
         .map((field) => field.name)
         .join(", ")});`;
-      const outputWrite = `println!("{}", result);`;
+       
+      let outputWrite = '';
+        if (this.outputType === 'ListNode') {
+          outputWrite = `print_list_node(&result);`;
+        } else if (this.outputType === 'TreeNode') {
+          outputWrite = `print_tree_node(result);`;
+        } else {
+          outputWrite = `println!("{}", result);`;
+        }
     
+        let typeDefinitions = '';
+        if (requiresListNode) {
+          typeDefinitions += `
+      #[derive(Debug)]
+      struct ListNode {
+          val: i32,
+          next: Option<Box<ListNode>>,
+      }
+      
+      impl ListNode {
+          fn new(val: i32) -> Self {
+              ListNode { val, next: None }
+          }
+      }
+      `;
+        }
+      
+        if (requiresTreeNode) {
+          typeDefinitions += `
+      #[derive(Debug)]
+      struct TreeNode {
+          val: i32,
+          left: Option<Rc<RefCell<TreeNode>>>,
+          right: Option<Rc<RefCell<TreeNode>>>,
+      }
+      
+      impl TreeNode {
+          fn new(val: i32) -> Self {
+              TreeNode { val, left: None, right: None }
+          }
+      }
+      `;
+        }
+      
+        let helperFunctions = '';
+      
+        if (requiresListNode) {
+          helperFunctions += `
+      fn build_list_node(lines: &mut Lines, n: usize) -> Option<Box<ListNode>> {
+          let mut head: Option<Box<ListNode>> = None;
+          let mut tail = &mut head;
+          if let Some(line) = lines.next() {
+              for val_str in line.split_whitespace().take(n) {
+                  if let Ok(val) = val_str.parse::<i32>() {
+                      let new_node = Box::new(ListNode::new(val));
+                      if tail.is_none() {
+                          *tail = Some(new_node);
+                      } else {
+                          tail.as_mut().unwrap().next = Some(new_node);
+                          tail = &mut tail.as_mut().unwrap().next;
+                      }
+                  }
+              }
+          }
+          head
+      }
+      
+      fn print_list_node(head: &Option<Box<ListNode>>) {
+          let mut current = head;
+          while let Some(node) = current {
+              print!("{}", node.val);
+              if node.next.is_some() {
+                  print!(" ");
+              }
+              current = &node.next;
+          }
+          println!();
+      }
+      `;
+        }
+      
+        if (requiresTreeNode) {
+          helperFunctions += `
+      fn build_tree_node(values: &[Option<i32>]) -> Option<Rc<RefCell<TreeNode>>> {
+          if values.is_empty() || values[0].is_none() {
+              return None;
+          }
+          let root = Rc::new(RefCell::new(TreeNode::new(values[0].unwrap())));
+          let mut queue = std::collections::VecDeque::new();
+          queue.push_back(root.clone());
+          let mut i = 1;
+          while !queue.is_empty() && i < values.len() {
+              let current = queue.pop_front().unwrap();
+              if let Some(Some(val)) = values.get(i) {
+                  let left_node = Rc::new(RefCell::new(TreeNode::new(*val)));
+                  current.borrow_mut().left = Some(left_node.clone());
+                  queue.push_back(left_node);
+              }
+              i += 1;
+              if let Some(Some(val)) = values.get(i) {
+                  let right_node = Rc::new(RefCell::new(TreeNode::new(*val)));
+                  current.borrow_mut().right = Some(right_node.clone());
+                  queue.push_back(right_node);
+              }
+              i += 1;
+          }
+          Some(root)
+      }
+      
+      fn print_tree_node(root: Option<Rc<RefCell<TreeNode>>>) {
+          if root.is_none() {
+              println!("null");
+              return;
+          }
+          let mut result = Vec::new();
+          let mut queue = std::collections::VecDeque::new();
+          queue.push_back(root);
+          while !queue.is_empty() {
+              let node_option = queue.pop_front().unwrap();
+              if let Some(node_rc) = node_option {
+                  let node = node_rc.borrow();
+                  result.push(node.val.to_string());
+                  queue.push_back(node.left.clone());
+                  queue.push_back(node.right.clone());
+              } else {
+                  result.push("null".to_string());
+              }
+          }
+          while result.last() == Some(&"null".to_string()) {
+              result.pop();
+          }
+          println!("{}", result.join(" "));
+      }
+      `;
+        }
+
       return `use std::fs::read_to_string;
-    use std::io::{self};
-    use std::str::Lines;
+        use std::io::{self};
+        use std::str::Lines;
+       ${requiresTreeNode ? 'use std::rc::Rc;\nuse std::cell::RefCell;' : ''}
     
+       ${typeDefinitions}
+
     //##USER_CODE_HERE##
-    
+
     fn main() -> io::Result<()> {
       let input = read_to_string("/dev/problems/${this.problemName
         .toLowerCase()
@@ -548,16 +965,19 @@ mapTypeToCpp(type: string): string {
       ${functionCall}
       ${outputWrite}
       Ok(())
-    }${
-        containsVector
-          ? `\n${this.generateParsingFunctions()}`
-          : ""
-      }
-    `;
+    }${helperFunctions}
+    ${
+      containsVector ? `\n${this.generateParsingFunctions()}` : ''
     }
-    
+`;
+}
+   
     mapTypeToRust(type: string): string {
       switch (type) {
+        case "ListNode":
+          return "Option<Box<ListNode>>";
+        case "TreeNode":
+          return "Option<Rc<RefCell<TreeNode>>>";
         case "int":
           return "i32";
         case "float":
@@ -676,6 +1096,11 @@ mapTypeToCpp(type: string): string {
 
     mapTypeToJs(type: string, name: string): string {
       switch (type) {
+        case "ListNode":
+          return `const ${name} = buildListNode(input.splice(0, parseInt(input.shift() || "0")));`;
+        case "TreeNode":
+          return `const ${name} = buildTreeNode(input);`;
+  
         case "int":
           return `const ${name} = parseInt(input.shift() || "0");`;
         case "float":
@@ -689,75 +1114,86 @@ mapTypeToCpp(type: string): string {
           return `const ${name} = input.shift() || "";`;
         case "bool":
           return `const ${name} = (input.shift() || "false") === 'true';`;
-    
+  
         case "int[]":
         case "list<int>":
           return `const size_${name} = parseInt(input.shift() || "0");
-      const ${name} = input.splice(0, size_${name}).map(x => parseInt(x));`;
+        const ${name} = input.splice(0, size_${name}).map(x => parseInt(x));`;
         case "float[]":
         case "double[]":
         case "list<float>":
         case "list<double>":
           return `const size_${name} = parseInt(input.shift() || "0");
-      const ${name} = input.splice(0, size_${name}).map(x => parseFloat(x));`;
+        const ${name} = input.splice(0, size_${name}).map(x => parseFloat(x));`;
         case "char[]":
         case "list<char>":
           return `const size_${name} = parseInt(input.shift() || "0");
-      const ${name} = input.splice(0, size_${name}).map(x => x.charAt(0));`;
+        const ${name} = input.splice(0, size_${name}).map(x => x.charAt(0));`;
         case "string[]":
         case "list<string>":
           return `const size_${name} = parseInt(input.shift() || "0");
-      const ${name} = input.splice(0, size_${name});`;
+        const ${name} = input.splice(0, size_${name});`;
         case "bool[]":
         case "list<bool>":
           return `const size_${name} = parseInt(input.shift() || "0");
-      const ${name} = input.splice(0, size_${name}).map(x => x === 'true');`;
-    
+        const ${name} = input.splice(0, size_${name}).map(x => x === 'true');`;
+  
         case "int[][]":
         case "list<list<int>>":
           return `const size_${name}_outer = parseInt(input.shift() || "0");
-      const ${name} = [];
-      for (let i = 0; i < size_${name}_outer; i++) {
-        const size_${name}_inner = parseInt(input.shift() || "0");
-        ${name}.push(input.splice(0, size_${name}_inner).map(x => parseInt(x)));
-      }`;
+        const ${name} = [];
+        for (let i = 0; i < size_${name}_outer; i++) {
+          const size_${name}_inner = parseInt(input.shift() || "0");
+          ${name}.push(input.splice(0, size_${name}_inner).map(x => parseInt(x)));
+        }`;
         case "float[][]":
         case "double[][]":
         case "list<list<float>>":
         case "list<list<double>>":
           return `const size_${name}_outer = parseInt(input.shift() || "0");
-      const ${name} = [];
-      for (let i = 0; i < size_${name}_outer; i++) {
-        const size_${name}_inner = parseInt(input.shift() || "0");
-        ${name}.push(input.splice(0, size_${name}_inner).map(x => parseFloat(x)));
-      }`;
+        const ${name} = [];
+        for (let i = 0; i < size_${name}_outer; i++) {
+          const size_${name}_inner = parseInt(input.shift() || "0");
+          ${name}.push(input.splice(0, size_${name}_inner).map(x => parseFloat(x)));
+        }`;
         case "char[][]":
         case "list<list<char>>":
           return `const size_${name}_outer = parseInt(input.shift() || "0");
-      const ${name} = [];
-      for (let i = 0; i < size_${name}_outer; i++) {
-        const size_${name}_inner = parseInt(input.shift() || "0");
-        ${name}.push(input.splice(0, size_${name}_inner).map(x => x.charAt(0)));
-      }`;
+        const ${name} = [];
+        for (let i = 0; i < size_${name}_outer; i++) {
+          const size_${name}_inner = parseInt(input.shift() || "0");
+          ${name}.push(input.splice(0, size_${name}_inner).map(x => x.charAt(0)));
+        }`;
         case "string[][]":
         case "list<list<string>>":
           return `const size_${name}_outer = parseInt(input.shift() || "0");
-      const ${name} = [];
-      for (let i = 0; i < size_${name}_outer; i++) {
-        const size_${name}_inner = parseInt(input.shift() || "0");
-        ${name}.push(input.splice(0, size_${name}_inner));
-      }`;
+        const ${name} = [];
+        for (let i = 0; i < size_${name}_outer; i++) {
+          const size_${name}_inner = parseInt(input.shift() || "0");
+          ${name}.push(input.splice(0, size_${name}_inner));
+        }`;
         case "bool[][]":
         case "list<list<bool>>":
           return `const size_${name}_outer = parseInt(input.shift() || "0");
-      const ${name} = [];
-      for (let i = 0; i < size_${name}_outer; i++) {  
-        const size_${name}_inner = parseInt(input.shift() || "0");
-        ${name}.push(input.splice(0, size_${name}_inner).map(x => x === 'true'));
-      }`;
-    
+        const ${name} = [];
+        for (let i = 0; i < size_${name}_outer; i++) {  
+          const size_${name}_inner = parseInt(input.shift() || "0");
+          ${name}.push(input.splice(0, size_${name}_inner).map(x => x === 'true'));
+        }`;
+  
         default:
           return `const ${name} = input.shift(); // Unknown type`;
+      }
+    }
+  
+    generateJsOutputWrite(varName: string): string {
+      switch (this.outputType) {
+        case 'ListNode':
+          return `printListNode(${varName});`;
+        case 'TreeNode':
+          return `printTreeNode(${varName});`;
+        default:
+          return `console.log(${varName});`;
       }
     }
 }

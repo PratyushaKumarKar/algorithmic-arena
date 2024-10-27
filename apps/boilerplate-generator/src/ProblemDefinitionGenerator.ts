@@ -61,8 +61,6 @@ export class ProblemDefinitionParser {
       })
       .join(", ");
     
-    // console.log(inputParams + " this is boilerplate input cpp");
-
     return `class ${className} {
 public:
     ${outputType} ${functionName}(${inputParams}) {
@@ -71,15 +69,15 @@ public:
     }
     // You can add more methods here.
 };`;
-}
+  }
 
-shouldPassByReferenceCpp(type: string): boolean {
-  const cppType = type;
-  return cppType === "std::vector<char>" || 
-         cppType === "std::vector<std::vector<char>>" || 
-         cppType === "std::string" || 
-         cppType === "std::vector<std::string>";
-}
+  shouldPassByReferenceCpp(type: string): boolean {
+    const cppType = type;
+    return cppType === "std::vector<char>" || 
+           cppType === "std::vector<std::vector<char>>" || 
+           cppType === "std::string" || 
+           cppType === "std::vector<std::string>";
+  }
 
   generateJava(): string {
     const className = this.sanitizeName(this.className || "Solution");
@@ -139,7 +137,6 @@ impl ${className} {
     return name.replace(/[^a-zA-Z0-9_]/g, '');
   }
 
-  // Helper functions for default return values
   getDefaultReturnValueCpp(type: string): string {
     if (type.startsWith('std::vector') || type.endsWith('[]')) {
       return '{}';
@@ -149,6 +146,8 @@ impl ${className} {
       return 'false';
     } else if (type === 'std::string') {
       return '""';
+    } else if (type.endsWith('*')) {
+      return 'nullptr';
     } else {
       return '{}';
     }
@@ -163,6 +162,8 @@ impl ${className} {
       return 'false';
     } else if (type === 'String') {
       return '""';
+    } else if (type === 'ListNode' || type === 'TreeNode') {
+      return 'null';
     } else {
       return 'null';
     }
@@ -177,6 +178,8 @@ impl ${className} {
       return 'false';
     } else if (type === 'string') {
       return '""';
+    } else if (type === 'ListNode' || type === 'TreeNode') {
+      return 'null';
     } else {
       return 'null';
     }
@@ -191,18 +194,180 @@ impl ${className} {
       return 'false';
     } else if (type === 'String') {
       return 'String::new()';
+    } else if (type.startsWith('Option')) {
+      return 'None';
     } else {
       return '()';
     }
   }
 
-  // Type mapping functions
+  mapTypeToCpp(type: string): string {
+    switch (type) {
+      case "int":
+        return "int";
+      case "float":
+        return "float";
+      case "double":
+        return "double";
+      case "long":
+        return "long";
+      case "char":
+        return "char";
+      case "string":
+        return "std::string";
+      case "bool":
+        return "bool";
+      case "ListNode":
+        return "ListNode*";
+      case "TreeNode":
+        return "TreeNode*";
+      case "int[]":
+        return "std::vector<int>";
+      case "float[]":
+        return "std::vector<float>";
+      case "double[]":
+        return "std::vector<double>";
+      case "long[]":
+        return "std::vector<long>";
+      case "char[]":
+        return "std::vector<char>";
+      case "string[]":
+        return "std::vector<std::string>";
+      case "bool[]":
+        return "std::vector<bool>";
+      case "int[][]":
+        return "std::vector<std::vector<int>>";
+      case "float[][]":
+        return "std::vector<std::vector<float>>";
+      case "double[][]":
+        return "std::vector<std::vector<double>>";
+      case "long[][]":
+        return "std::vector<std::vector<long>>";
+      case "char[][]":
+        return "std::vector<std::vector<char>>";
+      case "string[][]":
+        return "std::vector<std::vector<std::string>>";
+      case "bool[][]":
+        return "std::vector<std::vector<bool>>";
+      case "list<int>":
+        return "std::vector<int>";
+      case "list<float>":
+        return "std::vector<float>";
+      case "list<double>":
+        return "std::vector<double>";
+      case "list<long>":
+        return "std::vector<long>";
+      case "list<char>":
+        return "std::vector<char>";
+      case "list<string>":
+        return "std::vector<std::string>";
+      case "list<bool>":
+        return "std::vector<bool>";
+      case "list<list<int>>":
+        return "std::vector<std::vector<int>>";
+      case "list<list<float>>":
+        return "std::vector<std::vector<float>>";
+      case "list<list<double>>":
+        return "std::vector<std::vector<double>>";
+      case "list<list<long>>":
+        return "std::vector<std::vector<long>>";
+      case "list<list<char>>":
+        return "std::vector<std::vector<char>>";
+      case "list<list<string>>":
+        return "std::vector<std::vector<std::string>>";
+      case "list<list<bool>>":
+        return "std::vector<std::vector<bool>>";
+      default:
+        return "unknown";
+    }
+  }
+
+  mapTypeToJava(type: string): string {
+    switch (type) {
+      case "int":
+        return "int";
+      case "float":
+        return "float";
+      case "double":
+        return "double";
+      case "long":
+        return "long";
+      case "char":
+        return "char";
+      case "string":
+        return "String";
+      case "bool":
+        return "boolean";
+      case "ListNode":
+        return "ListNode";
+      case "TreeNode":
+        return "TreeNode";
+      case "int[]":
+        return "int[]";
+      case "float[]":
+        return "float[]";
+      case "double[]":
+        return "double[]";
+      case "long[]":
+        return "long[]";
+      case "char[]":
+        return "char[]";
+      case "string[]":
+        return "String[]";
+      case "bool[]":
+        return "boolean[]";
+      case "int[][]":
+        return "int[][]";
+      case "float[][]":
+        return "float[][]";
+      case "double[][]":
+        return "double[][]";
+      case "long[][]":
+        return "long[][]";
+      case "char[][]":
+        return "char[][]";
+      case "string[][]":
+        return "String[][]";
+      case "bool[][]":
+        return "boolean[][]";
+      case "list<int>":
+        return "List<Integer>";
+      case "list<float>":
+        return "List<Float>";
+      case "list<double>":
+        return "List<Double>";
+      case "list<long>":
+        return "List<Long>";
+      case "list<char>":
+        return "List<Character>";
+      case "list<string>":
+        return "List<String>";
+      case "list<bool>":
+        return "List<Boolean>";
+      case "list<list<int>>":
+        return "List<List<Integer>>";
+      case "list<list<float>>":
+        return "List<List<Float>>";
+      case "list<list<double>>":
+        return "List<List<Double>>";
+      case "list<list<long>>":
+        return "List<List<Long>>";
+      case "list<list<char>>":
+        return "List<List<Character>>";
+      case "list<list<string>>":
+        return "List<List<String>>";
+      case "list<list<bool>>":
+        return "List<List<Boolean>>";
+      default:
+        return "unknown";
+    }
+  }
+
   mapTypeToRust(type: string): string {
     switch (type) {
       case "int":
         return "i32";
       case "float":
-        return "f64";
       case "double":
         return "f64";
       case "long":
@@ -213,6 +378,10 @@ impl ${className} {
         return "String";
       case "bool":
         return "bool";
+      case "ListNode":
+        return "Option<Box<ListNode>>";
+      case "TreeNode":
+        return "Option<Rc<RefCell<TreeNode>>>";
       case "int[]":
         return "Vec<i32>";
       case "float[]":
@@ -273,163 +442,4 @@ impl ${className} {
         return "unknown";
     }
   }
-  
-  getInnerTypeRust(type: string): string {
-    const match = type.match(/list<(.+)>/);
-    return match ? match[1] : "i32";
-  }
-  
-    mapTypeToCpp(type: string): string {
-      switch (type) {
-        case "int":
-          return "int";
-        case "float":
-          return "float";
-        case "double":
-          return "double";
-        case "long":
-          return "long";
-        case "char":
-          return "char";
-        case "string":
-          return "std::string";
-        case "bool":
-          return "bool";
-        case "int[]":
-          return "std::vector<int>";
-        case "float[]":
-          return "std::vector<float>";
-        case "double[]":
-          return "std::vector<double>";
-        case "long[]":
-          return "std::vector<long>";
-        case "char[]":
-          return "std::vector<char>";
-        case "string[]":
-          return "std::vector<std::string>";
-        case "bool[]":
-          return "std::vector<bool>";
-        case "int[][]":
-          return "std::vector<std::vector<int>>";
-        case "float[][]":
-          return "std::vector<std::vector<float>>";
-        case "double[][]":
-          return "std::vector<std::vector<double>>";
-        case "long[][]":
-          return "std::vector<std::vector<long>>";
-        case "char[][]":
-          return "std::vector<std::vector<char>>";
-        case "string[][]":
-          return "std::vector<std::vector<std::string>>";
-        case "bool[][]":
-          return "std::vector<std::vector<bool>>";
-        case "list<int>":
-          return "std::vector<int>";
-        case "list<float>":
-          return "std::vector<float>";
-        case "list<double>":
-          return "std::vector<double>";
-        case "list<long>":
-          return "std::vector<long>";
-        case "list<char>":
-          return "std::vector<char>";
-        case "list<string>":
-          return "std::vector<std::string>";
-        case "list<bool>":
-          return "std::vector<bool>";
-        case "list<list<int>>":
-          return "std::vector<std::vector<int>>";
-        case "list<list<float>>":
-          return "std::vector<std::vector<float>>";
-        case "list<list<double>>":
-          return "std::vector<std::vector<double>>";
-        case "list<list<long>>":
-          return "std::vector<std::vector<long>>";
-        case "list<list<char>>":
-          return "std::vector<std::vector<char>>";
-        case "list<list<string>>":
-          return "std::vector<std::vector<std::string>>";
-        case "list<list<bool>>":
-          return "std::vector<std::vector<bool>>";
-        default:
-          return "unknown";
-      }
-    }
-  
-    mapTypeToJava(type: string): string {
-      switch (type) {
-        case "int":
-          return "int";
-        case "float":
-          return "float";
-        case "double":
-          return "double";
-        case "long":
-          return "long";
-        case "char":
-          return "char";
-        case "string":
-          return "String";
-        case "bool":
-          return "boolean";
-        case "int[]":
-          return "int[]";
-        case "float[]":
-          return "float[]";
-        case "double[]":
-          return "double[]";
-        case "long[]":
-          return "long[]";
-        case "char[]":
-          return "char[]";
-        case "string[]":
-          return "String[]";
-        case "bool[]":
-          return "boolean[]";
-        case "int[][]":
-          return "int[][]";
-        case "float[][]":
-          return "float[][]";
-        case "double[][]":
-          return "double[][]";
-        case "long[][]":
-          return "long[][]";
-        case "char[][]":
-          return "char[][]";
-        case "string[][]":
-          return "String[][]";
-        case "bool[][]":
-          return "boolean[][]";
-        case "list<int>":
-          return "List<Integer>";
-        case "list<float>":
-          return "List<Float>";
-        case "list<double>":
-          return "List<Double>";
-        case "list<long>":
-          return "List<Long>";
-        case "list<char>":
-          return "List<Character>";
-        case "list<string>":
-          return "List<String>";
-        case "list<bool>":
-          return "List<Boolean>";
-        case "list<list<int>>":
-          return "List<List<Integer>>";
-        case "list<list<float>>":
-          return "List<List<Float>>";
-        case "list<list<double>>":
-          return "List<List<Double>>";
-        case "list<list<long>>":
-          return "List<List<Long>>";
-        case "list<list<char>>":
-          return "List<List<Character>>";
-        case "list<list<string>>":
-          return "List<List<String>>";
-        case "list<list<bool>>":
-          return "List<List<Boolean>>";
-        default:
-          return "unknown";
-      }
-    }
 }
