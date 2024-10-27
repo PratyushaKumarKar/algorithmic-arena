@@ -1,6 +1,5 @@
-3 
-4
-A B C E
-S F C S
-A D E E
-ABCB
+2 
+2
+I F
+L T
+ZPUUA

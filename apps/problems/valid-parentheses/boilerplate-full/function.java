@@ -10,10 +10,10 @@
       
     public static void main(String[] args) throws IOException {
       BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-      int num1 = Integer.parseInt(br.readLine().trim());
-int num2 = Integer.parseInt(br.readLine().trim());
+      String s = br.readLine().trim();
+String t = br.readLine().trim();
       Solution obj = new Solution();
-      int result = obj.sum(num1, num2);
+      boolean result = obj.isAnagram(s, t);
       System.out.println(result);
       br.close();
     }

@@ -10,12 +10,12 @@
 
 
 int main() {
-    int num1;
-std::cin >> num1;
-int num2;
-std::cin >> num2;
+    std::string s;
+std::cin >> s;
+std::string t;
+std::cin >> t;
     Solution obj;
-    int result = obj.sum(num1, num2);
-    std::cout << result << std::endl;
+    bool result = obj.isAnagram(s, t);
+    std::cout << (result ? "true" : "false") << std::endl;
     return 0;
 }
