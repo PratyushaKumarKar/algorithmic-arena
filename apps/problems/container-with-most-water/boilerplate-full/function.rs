@@ -8,11 +8,11 @@ use std::fs::read_to_string;
     //##USER_CODE_HERE##
 
     fn main() -> io::Result<()> {
-      let input = read_to_string("/dev/problems/classroom/tests/inputs/##INPUT_FILE_INDEX##.txt")?;
+      let input = read_to_string("/dev/problems/container-with most water/tests/inputs/##INPUT_FILE_INDEX##.txt")?;
       let mut lines = input.lines();
-      let size_arr: usize = lines.next().and_then(|line| line.parse().ok()).unwrap_or(0);
-    let arr: Vec<i32> = parse_input(&mut lines, size_arr);
-      let result = Solution::classroom(arr);
+      let size_height: usize = lines.next().and_then(|line| line.parse().ok()).unwrap_or(0);
+    let height: Vec<i32> = parse_input(&mut lines, size_height);
+      let result = Solution::maxArea(height);
       println!("{}", result);
       Ok(())
     }

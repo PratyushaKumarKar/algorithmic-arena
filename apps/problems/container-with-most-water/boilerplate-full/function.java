@@ -10,14 +10,14 @@
       
     public static void main(String[] args) throws IOException {
       BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-      int size_arr = Integer.parseInt(br.readLine().trim());
-      List<Integer> arr = new ArrayList<>();
-      String[] items_arr = br.readLine().trim().split("\\s+");
-      for (int i = 0; i < size_arr; i++) {
-        arr.add(Integer.parseInt(items_arr[i]));
-      }
+      int size_height = Integer.parseInt(br.readLine().trim());
+        int[] height = new int[size_height];
+        String[] items_height = br.readLine().trim().split("\\s+");
+        for (int i = 0; i < size_height; i++) {
+          height[i] = Integer.parseInt(items_height[i]);
+        }
       Solution obj = new Solution();
-      int result = obj.classroom(arr);
+      int result = obj.maxArea(height);
       System.out.println(result);
       br.close();
     }

@@ -10,15 +10,15 @@
 
 
 int main() {
-    int m_arr;
-std::cin >> m_arr;
-std::vector<int> arr(m_arr);
+    int m_height;
+std::cin >> m_height;
+std::vector<int> height(m_height);
 
-for(int i = 0; i < m_arr; ++i) {
-    std::cin >> arr[i];
+for(int i = 0; i < m_height; ++i) {
+    std::cin >> height[i];
 }
     Solution obj;
-    int result = obj.classroom(arr);
+    int result = obj.maxArea(height);
     std::cout << result << std::endl;
     return 0;
 }
