@@ -39,7 +39,7 @@ function generatePartialBoilerplate(generatorFilePath: string) {
   console.log("Boilerplate code generated successfully!");
 }
 
-function generateFullBoilerPLate(generatorFilePath: string) {
+export function generateFullBoilerPLate(generatorFilePath: string) {
   const inputFilePath = path.join(generatorFilePath, "Structure.md");
   const boilerplatePath = path.join(
     generatorFilePath,
