@@ -1,5 +1,5 @@
 /**
-     * @param {list<int>} nums
+     * @param {int[]} nums
  * @param {int} target
     */
     var search = function(nums, target) {

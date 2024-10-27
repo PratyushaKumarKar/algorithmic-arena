@@ -1,5 +1,5 @@
 class Solution {
-    public int search(List<Integer> nums, int target) {
+    public int search(int[] nums, int target) {
         // Your code goes here
         return 0;
     }
